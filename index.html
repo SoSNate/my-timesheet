@@ -44,7 +44,8 @@
             <p class="text-gray-400 mt-2">הנתונים שלך מסונכרנים אוטומטית בין כל המכשירים</p>
         </header>
 
-        <div id="loading" class="text-center py-8 text-gray-400">טוען נתונים...</div>
+        <div id="loading" class="text-center py-8 text-gray-400">מתחבר לשירות הסנכרון...</div>
+        <div id="error-message" class="text-center py-4 text-red-400 font-semibold hidden"></div>
 
         <div class="table-container border border-gray-700 rounded-lg hidden">
             <table class="w-full text-sm text-right text-gray-300">
@@ -85,7 +86,20 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, updateDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // =================================================================
+        //  Your web app's Firebase configuration - DO NOT EDIT
+        // =================================================================
+        const firebaseConfig = {
+          apiKey: "AIzaSyCQHQ3NjM3aHWpidqEDcbKSUbfAr4WH_tM",
+          authDomain: "my-timesheet-app-10a89.firebaseapp.com",
+          projectId: "my-timesheet-app-10a89",
+          storageBucket: "my-timesheet-app-10a89.appspot.com",
+          messagingSenderId: "388377539767",
+          appId: "1:388377539767:web:894df338184db76de28932"
+        };
+        // =================================================================
 
         // DOM Elements
         const timesheetBody = document.getElementById('timesheet-body');
@@ -93,6 +107,7 @@
         const totalHoursEl = document.getElementById('total-hours');
         const totalPaymentEl = document.getElementById('total-payment');
         const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error-message');
         const tableContainer = document.querySelector('.table-container');
         const userIdEl = document.getElementById('user-id');
 
@@ -100,16 +115,23 @@
         let db, auth, userId, timesheetCollectionRef;
         const renderedRows = new Map(); 
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-timesheet-app';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        function showError(message) {
+            loadingEl.style.display = 'none';
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+        }
 
         try {
+            if (!firebaseConfig.projectId) {
+                throw new Error("Missing Firebase configuration.");
+            }
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
         } catch (error) {
             console.error("Firebase initialization failed:", error);
-            loadingEl.textContent = "שגיאה בהתחברות לשירות הסנכרון.";
+            showError("שגיאה בתצורת Firebase. יש לוודא שהפרטים שהודבקו בקוד נכונים.");
+            return;
         }
         
         // Authentication
@@ -117,19 +139,20 @@
             if (user) {
                 userId = user.uid;
                 userIdEl.textContent = userId.substring(0, 10) + '...';
-                const collectionPath = `artifacts/${appId}/users/${userId}/timesheet_entries`;
-                timesheetCollectionRef = collection(db, collectionPath);
+                timesheetCollectionRef = collection(db, `users/${userId}/entries`);
                 listenForDataChanges();
             } else {
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    await signInAnonymously(auth);
                 } catch (error) {
-                    console.error("Authentication Error:", error);
-                    loadingEl.textContent = "שגיאת התחברות.";
+                    console.error("Anonymous Authentication Error:", error);
+                    if (error.code === 'auth/configuration-not-found') {
+                        showError("שגיאת הגדרה: יש להפעיל את שיטת הכניסה 'Anonymous' במסוף של Firebase.");
+                    } else if (error.code === 'auth/unauthorized-domain') {
+                         showError("שגיאת אבטחה: יש להוסיף את כתובת האתר (Domain) לרשימה המורשית ב-Firebase.");
+                    } else {
+                        showError("שגיאת התחברות אנונימית.");
+                    }
                 }
             }
         });
@@ -141,25 +164,27 @@
                 loadingEl.style.display = 'none';
                 tableContainer.classList.remove('hidden');
 
-                const docIdsOnServer = new Set(snapshot.docs.map(d => d.id));
-                
+                const serverIds = new Set(snapshot.docs.map(doc => doc.id));
+
                 snapshot.docs.forEach(doc => {
+                    const data = doc.data();
                     if (!renderedRows.has(doc.id)) {
-                        createAndAppendRow(doc.data(), doc.id);
+                         createAndAppendRow(data, doc.id);
                     }
                 });
-                
+
                 renderedRows.forEach((row, id) => {
-                    if (!docIdsOnServer.has(id)) {
+                    if (!serverIds.has(id)) {
                         row.remove();
                         renderedRows.delete(id);
                     }
                 });
 
                 calculateGrandTotals();
+
             }, (error) => {
                 console.error("Error fetching data:", error);
-                loadingEl.textContent = "שגיאה בטעינת הנתונים.";
+                showError("שגיאה בטעינת הנתונים. ודא שחוקי האבטחה (Rules) ב-Firestore הוגדרו כראוי.");
             });
         }
 
@@ -183,7 +208,7 @@
                 </td>
             `;
 
-            row.addEventListener('input', debounce(() => updateRowInDB(id, row), 500));
+            row.addEventListener('input', debounce((e) => updateRowInDB(id, row, e.target), 500));
             row.querySelector('.delete-btn').addEventListener('click', () => deleteRowFromDB(id));
             
             timesheetBody.appendChild(row);
@@ -193,7 +218,7 @@
         // Database Operations
         const addRowToDB = async () => {
             if (!userId) return;
-            await addDoc(timesheetCollectionRef, {
+            const newDoc = await addDoc(timesheetCollectionRef, {
                 date: new Date().toISOString().split('T')[0],
                 client: '',
                 rate: 0,
@@ -205,10 +230,10 @@
         const updateRowInDB = async (id, rowElement) => {
             const dataToUpdate = {
                 date: rowElement.querySelector('input[type="date"]').value,
-                client: rowElement.querySelector('input[type="text"]').value,
+                client: rowElement.querySelector('input[type="text"][placeholder="שם הלקוח"]').value,
                 rate: parseFloat(rowElement.querySelector('.rate').value) || 0,
                 hours: parseFloat(rowElement.querySelector('.hours').value) || 0,
-                notes: rowElement.querySelector('input[type="text"]:last-of-type').value,
+                notes: rowElement.querySelector('input[type="text"][placeholder="הוסף הערה..."]').value,
             };
             
             const rate = dataToUpdate.rate;
@@ -229,7 +254,7 @@
         const calculateGrandTotals = () => {
             let totalHours = 0;
             let totalPayment = 0;
-            renderedRows.forEach(row => {
+            document.querySelectorAll('#timesheet-body tr').forEach(row => {
                 totalHours += parseFloat(row.querySelector('.hours').value) || 0;
                 totalPayment += parseFloat(row.querySelector('.daily-total').textContent) || 0;
             });
