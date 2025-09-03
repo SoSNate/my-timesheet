@@ -7,90 +7,118 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Assistant', sans-serif;
-            background-color: #111827; /* Dark background */
-        }
-        .table-container {
-            max-height: 60vh;
-            overflow-y: auto;
-        }
+        body { font-family: 'Assistant', sans-serif; background-color: #111827; }
+        .table-container { max-height: 55vh; overflow-y: auto; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1f2937; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
-        }
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-        }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        .modal-backdrop { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
     </style>
 </head>
 <body class="p-4 md:p-8 text-gray-200">
-    <div class="max-w-6xl mx-auto bg-gray-900 p-6 rounded-2xl shadow-lg border border-gray-700">
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-white">גיליון רישום שעות עבודה</h1>
-            <p class="text-gray-400 mt-2">הנתונים שלך מסונכרנים אוטומטית בין כל המכשירים</p>
-        </header>
 
-        <div id="loading" class="text-center py-8 text-gray-400">מתחבר לשירות הסנכרון...</div>
-        <div id="error-message" class="text-center py-4 text-red-400 font-semibold hidden"></div>
+    <!-- Login Screen -->
+    <div id="login-screen" class="max-w-md mx-auto text-center mt-20 bg-gray-900 p-8 rounded-2xl shadow-lg border border-gray-700">
+        <h1 class="text-3xl font-bold text-white mb-4">גיליון שעות עבודה</h1>
+        <p class="text-gray-400 mb-8">התחבר עם חשבון גוגל כדי לסנכרן את הנתונים שלך בין כל המכשירים.</p>
+        <button id="google-signin-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 shadow-md flex items-center justify-center gap-3">
+            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.022,36.21,44,30.551,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+            <span>התחברות באמצעות גוגל</span>
+        </button>
+    </div>
 
-        <div class="table-container border border-gray-700 rounded-lg hidden">
-            <table class="w-full text-sm text-right text-gray-300">
-                <thead class="text-xs text-gray-400 uppercase bg-gray-800 sticky top-0">
-                    <tr>
-                        <th scope="col" class="px-6 py-3">תאריך</th>
-                        <th scope="col" class="px-6 py-3">בית ספר / לקוח</th>
-                        <th scope="col" class="px-6 py-3">תעריף לשעה (₪)</th>
-                        <th scope="col" class="px-6 py-3">שעות עבודה</th>
-                        <th scope="col" class="px-6 py-3">הערות</th>
-                        <th scope="col" class="px-6 py-3">סה"כ יומי (₪)</th>
-                        <th scope="col" class="px-6 py-3">פעולות</th>
-                    </tr>
-                </thead>
-                <tbody id="timesheet-body">
-                    <!-- Rows are rendered here by Firebase -->
-                </tbody>
-            </table>
-        </div>
-
-        <div class="mt-6 flex justify-between items-center flex-wrap gap-4">
-             <button id="add-row-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-md">הוסף שורה</button>
-            <div id="totals" class="flex items-center gap-6 bg-gray-800 p-4 rounded-lg shadow-inner border border-gray-700">
-                <div class="text-center">
-                    <span class="text-sm text-gray-400 block">סה"כ שעות</span>
-                    <span id="total-hours" class="text-xl font-bold text-white">0.00</span>
+    <!-- Main App Content -->
+    <div id="app-content" class="max-w-6xl mx-auto hidden">
+        <div class="bg-gray-900 p-6 rounded-2xl shadow-lg border border-gray-700">
+            <header class="text-center mb-6">
+                 <div class="flex justify-between items-center">
+                    <button id="signout-btn" class="text-sm text-red-400 hover:text-red-300">התנתק</button>
+                    <div class="flex-1 text-center">
+                        <h1 class="text-3xl font-bold text-white">גיליון רישום שעות עבודה</h1>
+                    </div>
+                    <div class="w-16"></div> <!-- Spacer -->
                 </div>
-                <div class="text-center">
-                    <span class="text-sm text-gray-400 block">סה"כ לתשלום</span>
-                    <span id="total-payment" class="text-xl font-bold text-green-400">0.00 ₪</span>
+                <p id="user-greeting" class="text-gray-400 mt-2"></p>
+            </header>
+
+            <div id="loading" class="text-center py-8 text-gray-400">טוען נתונים...</div>
+            <div id="error-message" class="text-center py-4 text-red-400 font-semibold hidden"></div>
+
+            <div class="table-container border border-gray-700 rounded-lg hidden">
+                <table class="w-full text-sm text-right text-gray-300">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-800 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">תאריך</th>
+                            <th scope="col" class="px-6 py-3">בית ספר / לקוח</th>
+                            <th scope="col" class="px-6 py-3">תעריף לשעה (₪)</th>
+                            <th scope="col" class="px-6 py-3">שעות עבודה</th>
+                            <th scope="col" class="px-6 py-3">הערות</th>
+                            <th scope="col" class="px-6 py-3">סה"כ יומי (₪)</th>
+                            <th scope="col" class="px-6 py-3">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timesheet-body"></tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex gap-2">
+                    <button id="add-row-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-md">הוסף שורה</button>
+                    <button id="export-modal-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-md">ייצוא דוח</button>
+                </div>
+                <div id="totals" class="flex items-center gap-6 bg-gray-800 p-4 rounded-lg shadow-inner border border-gray-700 w-full md:w-auto justify-center">
+                    <div class="text-center">
+                        <span class="text-sm text-gray-400 block">סה"כ שעות</span>
+                        <span id="total-hours" class="text-xl font-bold text-white">0.00</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-sm text-gray-400 block">סה"כ לתשלום</span>
+                        <span id="total-payment" class="text-xl font-bold text-green-400">0.00 ₪</span>
+                    </div>
                 </div>
             </div>
         </div>
-         <p class="text-xs text-center text-gray-500 mt-4">מזהה משתמש: <span id="user-id" class="font-mono bg-gray-700 p-1 rounded"></span></p>
+    </div>
+
+    <!-- Export Modal (Content unchanged) -->
+    <div id="export-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden modal-backdrop opacity-0">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md border border-gray-700 modal-content transform scale-95">
+            <h2 class="text-xl font-bold mb-4 text-white">הפקת דוח חודשי</h2>
+            <div class="flex gap-4 mb-4">
+                <select id="month-select" class="w-full bg-gray-700 text-white border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="0">ינואר</option><option value="1">פברואר</option><option value="2">מרץ</option><option value="3">אפריל</option><option value="4">מאי</option><option value="5">יוני</option><option value="6">יולי</option><option value="7">אוגוסט</option><option value="8">ספטמבר</option><option value="9">אוקטובר</option><option value="10">נובמבר</option><option value="11">דצמבר</option>
+                </select>
+                <select id="year-select" class="w-full bg-gray-700 text-white border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"></select>
+            </div>
+            <button id="generate-report-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">הפק דוח</button>
+            <div id="report-summary" class="mt-4 p-4 bg-gray-700/50 rounded-lg hidden">
+                <h3 class="font-bold text-lg mb-2 text-white">סיכום דוח</h3>
+                <div class="flex justify-between"><span class="text-gray-400">סה"כ רשומות:</span><span id="report-entries" class="font-bold text-white"></span></div>
+                <div class="flex justify-between"><span class="text-gray-400">סה"כ שעות:</span><span id="report-hours" class="font-bold text-white"></span></div>
+                <div class="flex justify-between"><span class="text-gray-400">סה"כ לתשלום:</span><span id="report-payment" class="font-bold text-green-400"></span></div>
+                <button id="export-csv-btn" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 hidden">ייצא ל-CSV</button>
+            </div>
+            <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300">&times;</button>
+        </div>
     </div>
 
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, updateDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // =================================================================
-        //  Your web app's Firebase configuration - DO NOT EDIT
-        // =================================================================
         const firebaseConfig = {
           apiKey: "AIzaSyCQHQ3NjM3aHWpidqEDcbKSUbfAr4WH_tM",
           authDomain: "my-timesheet-app-10a89.firebaseapp.com",
@@ -99,9 +127,15 @@
           messagingSenderId: "388377539767",
           appId: "1:388377539767:web:894df338184db76de28932"
         };
-        // =================================================================
-
-        // DOM Elements
+        
+        // --- Main DOM Elements ---
+        const loginScreen = document.getElementById('login-screen');
+        const appContent = document.getElementById('app-content');
+        const googleSigninBtn = document.getElementById('google-signin-btn');
+        const signoutBtn = document.getElementById('signout-btn');
+        const userGreeting = document.getElementById('user-greeting');
+        
+        // --- App Content DOM Elements ---
         const timesheetBody = document.getElementById('timesheet-body');
         const addRowBtn = document.getElementById('add-row-btn');
         const totalHoursEl = document.getElementById('total-hours');
@@ -109,11 +143,26 @@
         const loadingEl = document.getElementById('loading');
         const errorEl = document.getElementById('error-message');
         const tableContainer = document.querySelector('.table-container');
-        const userIdEl = document.getElementById('user-id');
+        
+        // --- Modal Elements ---
+        const exportModalBtn = document.getElementById('export-modal-btn');
+        const exportModal = document.getElementById('export-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+        const generateReportBtn = document.getElementById('generate-report-btn');
+        const reportSummary = document.getElementById('report-summary');
+        const reportEntries = document.getElementById('report-entries');
+        const reportHours = document.getElementById('report-hours');
+        const reportPayment = document.getElementById('report-payment');
+        const exportCsvBtn = document.getElementById('export-csv-btn');
 
-        // Firebase Setup
+        // --- Firebase & State ---
         let db, auth, userId, timesheetCollectionRef;
-        const renderedRows = new Map(); 
+        const renderedRows = new Map();
+        let allEntries = [];
+        let filteredReportData = [];
+        let unsubscribe; // To stop listener on sign out
 
         function showError(message) {
             loadingEl.style.display = 'none';
@@ -122,61 +171,82 @@
         }
 
         try {
-            if (!firebaseConfig.projectId) {
-                throw new Error("Missing Firebase configuration.");
-            }
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
         } catch (error) {
             console.error("Firebase initialization failed:", error);
-            showError("שגיאה בתצורת Firebase. יש לוודא שהפרטים שהודבקו בקוד נכונים.");
-            // THE ILLEGAL 'return;' STATEMENT WAS REMOVED FROM HERE
+            showError("שגיאה בתצורת Firebase.");
         }
         
-        // Authentication
-        onAuthStateChanged(auth, async (user) => {
+        // --- Authentication Logic ---
+        const provider = new GoogleAuthProvider();
+
+        googleSigninBtn.addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch((error) => {
+                 console.error("Google Sign-In Error:", error);
+                 showError("שגיאה בהתחברות עם גוגל.");
+            });
+        });
+
+        signoutBtn.addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        onAuthStateChanged(auth, (user) => {
             if (user) {
+                // User is signed in
                 userId = user.uid;
-                userIdEl.textContent = userId.substring(0, 10) + '...';
+                loginScreen.classList.add('hidden');
+                appContent.classList.remove('hidden');
+                userGreeting.textContent = `שלום, ${user.displayName || 'משתמש'}`;
+                
+                if (unsubscribe) unsubscribe(); // Stop any previous listener
                 timesheetCollectionRef = collection(db, `users/${userId}/entries`);
                 listenForDataChanges();
             } else {
-                try {
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("Anonymous Authentication Error:", error);
-                    if (error.code === 'auth/configuration-not-found') {
-                        showError("שגיאת הגדרה: יש להפעיל את שיטת הכניסה 'Anonymous' במסוף של Firebase.");
-                    } else if (error.code === 'auth/unauthorized-domain') {
-                         showError("שגיאת אבטחה: יש להוסיף את כתובת האתר (Domain) לרשימה המורשית ב-Firebase.");
-                    } else {
-                        showError("שגיאת התחברות אנונימית.");
-                    }
-                }
+                // User is signed out
+                if (unsubscribe) unsubscribe();
+                userId = null;
+                loginScreen.classList.remove('hidden');
+                appContent.classList.add('hidden');
+                timesheetBody.innerHTML = '';
+                renderedRows.clear();
+                allEntries = [];
+                calculateGrandTotals();
             }
         });
 
-        // Realtime Data Listener
+        // --- Data Logic (Mostly Unchanged) ---
         function listenForDataChanges() {
-            const q = query(timesheetCollectionRef);
-            onSnapshot(q, (snapshot) => {
+            const q = query(timesheetCollectionRef, orderBy("date", "desc"));
+            unsubscribe = onSnapshot(q, (snapshot) => {
                 loadingEl.style.display = 'none';
                 tableContainer.classList.remove('hidden');
+                
+                allEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const serverIds = new Set(snapshot.docs.map(doc => doc.id));
-
-                snapshot.docs.forEach(doc => {
+                snapshot.docChanges().forEach((change) => {
+                    const doc = change.doc;
                     const data = doc.data();
-                    if (!renderedRows.has(doc.id)) {
-                         createAndAppendRow(data, doc.id);
-                    }
-                });
 
-                renderedRows.forEach((row, id) => {
-                    if (!serverIds.has(id)) {
-                        row.remove();
-                        renderedRows.delete(id);
+                    if (change.type === "added") {
+                        if (!renderedRows.has(doc.id)) {
+                             const row = createRowElement(data, doc.id);
+                             timesheetBody.prepend(row);
+                             renderedRows.set(doc.id, row);
+                        }
+                    }
+                    if (change.type === "modified") {
+                        const row = renderedRows.get(doc.id);
+                        if(row) updateRowContent(row, data);
+                    }
+                    if (change.type === "removed") {
+                        const row = renderedRows.get(doc.id);
+                        if (row) {
+                            row.remove();
+                            renderedRows.delete(doc.id);
+                        }
                     }
                 });
 
@@ -184,17 +254,24 @@
 
             }, (error) => {
                 console.error("Error fetching data:", error);
-                showError("שגיאה בטעינת הנתונים. ודא שחוקי האבטחה (Rules) ב-Firestore הוגדרו כראוי.");
+                showError("שגיאה בטעינת הנתונים.");
             });
         }
-
-        // DOM Manipulation
-        function createAndAppendRow(data, id) {
+        
+        function createRowElement(data, id){
             const row = document.createElement('tr');
             row.className = 'bg-gray-800 border-b border-gray-700 hover:bg-gray-700/50 fade-in';
             row.dataset.id = id;
+            updateRowContent(row, data);
+            
+            row.addEventListener('input', debounce(() => updateRowInDB(id, row), 500));
+            row.querySelector('.delete-btn').addEventListener('click', () => deleteRowFromDB(id));
 
-            row.innerHTML = `
+            return row;
+        }
+        
+        function updateRowContent(row, data) {
+             row.innerHTML = `
                 <td class="px-6 py-4"><input type="date" class="w-full bg-gray-700 text-white border-gray-600 rounded-md p-1 focus:ring-blue-500 focus:border-blue-500" value="${data.date || ''}"></td>
                 <td class="px-6 py-4"><input type="text" placeholder="שם הלקוח" class="w-full bg-gray-700 text-white border-gray-600 rounded-md p-1 focus:ring-blue-500 focus:border-blue-500" value="${data.client || ''}"></td>
                 <td class="px-6 py-4"><input type="number" step="0.01" min="0" placeholder="0.00" class="w-20 bg-gray-700 text-white border-gray-600 rounded-md p-1 focus:ring-blue-500 focus:border-blue-500 rate" value="${data.rate || ''}"></td>
@@ -207,23 +284,12 @@
                     </button>
                 </td>
             `;
-
-            row.addEventListener('input', debounce((e) => updateRowInDB(id, row, e.target), 500));
-            row.querySelector('.delete-btn').addEventListener('click', () => deleteRowFromDB(id));
-            
-            timesheetBody.appendChild(row);
-            renderedRows.set(id, row);
         }
 
-        // Database Operations
         const addRowToDB = async () => {
             if (!userId) return;
-            const newDoc = await addDoc(timesheetCollectionRef, {
-                date: new Date().toISOString().split('T')[0],
-                client: '',
-                rate: 0,
-                hours: 0,
-                notes: '',
+            await addDoc(timesheetCollectionRef, {
+                date: new Date().toISOString().split('T')[0], client: '', rate: 0, hours: 0, notes: '',
             });
         };
 
@@ -235,42 +301,95 @@
                 hours: parseFloat(rowElement.querySelector('.hours').value) || 0,
                 notes: rowElement.querySelector('input[type="text"][placeholder="הוסף הערה..."]').value,
             };
-            
-            const rate = dataToUpdate.rate;
-            const hours = dataToUpdate.hours;
-            rowElement.querySelector('.daily-total').textContent = (rate * hours).toFixed(2);
-            calculateGrandTotals();
-            
             const docRef = doc(db, timesheetCollectionRef.path, id);
             await updateDoc(docRef, dataToUpdate);
         };
 
         const deleteRowFromDB = async (id) => {
-            const docRef = doc(db, timesheetCollectionRef.path, id);
-            await deleteDoc(docRef);
+            await deleteDoc(doc(db, timesheetCollectionRef.path, id));
         };
 
-        // Calculations & Utilities
         const calculateGrandTotals = () => {
             let totalHours = 0;
             let totalPayment = 0;
-            document.querySelectorAll('#timesheet-body tr').forEach(row => {
-                totalHours += parseFloat(row.querySelector('.hours').value) || 0;
-                totalPayment += parseFloat(row.querySelector('.daily-total').textContent) || 0;
+            allEntries.forEach(entry => {
+                totalHours += parseFloat(entry.hours) || 0;
+                totalPayment += (parseFloat(entry.rate) || 0) * (parseFloat(entry.hours) || 0);
             });
             totalHoursEl.textContent = totalHours.toFixed(2);
             totalPaymentEl.textContent = `${totalPayment.toFixed(2)} ₪`;
         };
         
-        const debounce = (func, delay) => {
-            let timeout;
-            return (...args) => {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func(...args), delay);
+        // --- Modal & Export Logic (Unchanged) ---
+        function setupModal() {
+            const currentYear = new Date().getFullYear();
+            for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+                const option = document.createElement('option');
+                option.value = i; option.textContent = i;
+                if(i === currentYear) option.selected = true;
+                yearSelect.appendChild(option);
+            }
+            monthSelect.value = new Date().getMonth();
+            exportModalBtn.addEventListener('click', () => {
+                exportModal.classList.remove('hidden');
+                setTimeout(() => {
+                    exportModal.querySelector('.modal-backdrop').classList.add('opacity-100');
+                    exportModal.querySelector('.modal-content').classList.add('scale-100');
+                }, 10);
+            });
+            const closeModal = () => {
+                exportModal.querySelector('.modal-backdrop').classList.remove('opacity-100');
+                exportModal.querySelector('.modal-content').classList.remove('scale-100');
+                setTimeout(() => {
+                    exportModal.classList.add('hidden');
+                    reportSummary.classList.add('hidden');
+                    exportCsvBtn.classList.add('hidden');
+                }, 300);
             };
-        };
-
-        // Event Listeners
+            closeModalBtn.addEventListener('click', closeModal);
+            exportModal.addEventListener('click', (e) => { if(e.target === exportModal) closeModal(); });
+            generateReportBtn.addEventListener('click', generateReport);
+            exportCsvBtn.addEventListener('click', exportToCsv);
+        }
+        function generateReport() {
+            const month = parseInt(monthSelect.value), year = parseInt(yearSelect.value);
+            filteredReportData = allEntries.filter(entry => {
+                const entryDate = new Date(entry.date);
+                return entryDate.getFullYear() === year && entryDate.getMonth() === month;
+            });
+            let totalHours = 0, totalPayment = 0;
+            filteredReportData.forEach(entry => {
+                totalHours += entry.hours || 0;
+                totalPayment += (entry.rate || 0) * (entry.hours || 0);
+            });
+            reportEntries.textContent = filteredReportData.length;
+            reportHours.textContent = totalHours.toFixed(2);
+            reportPayment.textContent = `${totalPayment.toFixed(2)} ₪`;
+            reportSummary.classList.remove('hidden');
+            exportCsvBtn.classList.toggle('hidden', filteredReportData.length === 0);
+        }
+        function exportToCsv() {
+             if (filteredReportData.length === 0) return;
+            const headers = ['תאריך', 'בית ספר / לקוח', 'תעריף לשעה (₪)', 'שעות עבודה', 'הערות', 'סה"כ יומי (₪)'];
+            const csvRows = [headers.join(',')];
+            filteredReportData.forEach(entry => {
+                const dailyTotal = ((entry.rate || 0) * (entry.hours || 0)).toFixed(2);
+                const values = [ entry.date, `"${(entry.client || '').replace(/"/g, '""')}"`, entry.rate, entry.hours, `"${(entry.notes || '').replace(/"/g, '""')}"`, dailyTotal ];
+                csvRows.push(values.join(','));
+            });
+            const filename = `report_${yearSelect.value}-${(parseInt(monthSelect.value) + 1).toString().padStart(2, '0')}.csv`;
+            const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        const debounce = (func, delay) => { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func(...args), delay); }; };
+        
+        // --- Initial Calls ---
+        setupModal();
         addRowBtn.addEventListener('click', addRowToDB);
     </script>
 </body>
