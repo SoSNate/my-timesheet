@@ -125,7 +125,7 @@
           projectId: "my-timesheet-app-10a89",
           storageBucket: "my-timesheet-app-10a89.appspot.com",
           messagingSenderId: "388377539767",
-          appId: "1:388377539767:web:894df338184db76de28932"
+          appId: "1:38837753767:web:894df338184db76de28932"
         };
         
         // --- Main DOM Elements ---
@@ -339,7 +339,7 @@
             });
             const closeModal = () => {
                 exportModal.querySelector('.modal-backdrop').classList.remove('opacity-100');
-                exportModal.querySelector('.modal-content').classList.remove('scale-100');
+                exportModal.querySelector('.modal-content').remove('scale-100');
                 setTimeout(() => {
                     exportModal.classList.add('hidden');
                     reportSummary.classList.add('hidden');
