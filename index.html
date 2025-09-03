@@ -44,7 +44,7 @@
             <p class="text-gray-400 mt-2">הנתונים שלך מסונכרנים אוטומטית בין כל המכשירים</p>
         </header>
 
-        <div id="loading" class="text-center py-8 text-gray-400">טוען נתונים...</div>
+        <div id="loading" class="text-center py-8 text-gray-400">מתחבר לשירות הסנכרון...</div>
 
         <div class="table-container border border-gray-700 rounded-lg hidden">
             <table class="w-full text-sm text-right text-gray-300">
@@ -85,7 +85,20 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, updateDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // =================================================================
+        //  שלב 1: הדבק כאן את אובייקט התצורה של Firebase מהמדריך
+        // =================================================================
+        const firebaseConfig = {
+            // apiKey: "...",
+            // authDomain: "...",
+            // projectId: "...",
+            // storageBucket: "...",
+            // messagingSenderId: "...",
+            // appId: "..."
+        };
+        // =================================================================
 
         // DOM Elements
         const timesheetBody = document.getElementById('timesheet-body');
@@ -100,16 +113,17 @@
         let db, auth, userId, timesheetCollectionRef;
         const renderedRows = new Map(); 
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-timesheet-app';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-
         try {
+            if (!firebaseConfig.apiKey) {
+                throw new Error("Missing Firebase configuration.");
+            }
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
         } catch (error) {
             console.error("Firebase initialization failed:", error);
-            loadingEl.textContent = "שגיאה בהתחברות לשירות הסנכרון.";
+            loadingEl.textContent = "שגיאה בתצורת Firebase. יש להדביק את פרטי הפרויקט בקוד.";
+            loadingEl.classList.add('text-red-400');
         }
         
         // Authentication
@@ -117,19 +131,15 @@
             if (user) {
                 userId = user.uid;
                 userIdEl.textContent = userId.substring(0, 10) + '...';
-                const collectionPath = `artifacts/${appId}/users/${userId}/timesheet_entries`;
-                timesheetCollectionRef = collection(db, collectionPath);
+                // Each user gets their own private collection
+                timesheetCollectionRef = collection(db, `users/${userId}/entries`);
                 listenForDataChanges();
             } else {
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    await signInAnonymously(auth);
                 } catch (error) {
-                    console.error("Authentication Error:", error);
-                    loadingEl.textContent = "שגיאת התחברות.";
+                    console.error("Anonymous Authentication Error:", error);
+                    loadingEl.textContent = "שגיאת התחברות אנונימית.";
                 }
             }
         });
@@ -141,25 +151,38 @@
                 loadingEl.style.display = 'none';
                 tableContainer.classList.remove('hidden');
 
-                const docIdsOnServer = new Set(snapshot.docs.map(d => d.id));
-                
+                const serverIds = new Set(snapshot.docs.map(doc => doc.id));
+
+                // Add or update rows
                 snapshot.docs.forEach(doc => {
-                    if (!renderedRows.has(doc.id)) {
-                        createAndAppendRow(doc.data(), doc.id);
+                    const data = doc.data();
+                    if (renderedRows.has(doc.id)) {
+                        // Update existing row if needed (less flicker)
+                        const row = renderedRows.get(doc.id);
+                        row.querySelector('input[type="date"]').value = data.date || '';
+                        row.querySelector('input[type="text"][placeholder="שם הלקוח"]').value = data.client || '';
+                        row.querySelector('.rate').value = data.rate || '';
+                        row.querySelector('.hours').value = data.hours || '';
+                        row.querySelector('input[type="text"][placeholder="הוסף הערה..."]').value = data.notes || '';
+                        row.querySelector('.daily-total').textContent = ((data.rate || 0) * (data.hours || 0)).toFixed(2);
+                    } else {
+                        createAndAppendRow(data, doc.id);
                     }
                 });
-                
+
+                // Remove deleted rows
                 renderedRows.forEach((row, id) => {
-                    if (!docIdsOnServer.has(id)) {
+                    if (!serverIds.has(id)) {
                         row.remove();
                         renderedRows.delete(id);
                     }
                 });
 
                 calculateGrandTotals();
+
             }, (error) => {
                 console.error("Error fetching data:", error);
-                loadingEl.textContent = "שגיאה בטעינת הנתונים.";
+                loadingEl.textContent = "שגיאה בטעינת הנתונים. ודא שהוספת את הדומיין לרשימה המורשית ב-Firebase.";
             });
         }
 
@@ -205,10 +228,10 @@
         const updateRowInDB = async (id, rowElement) => {
             const dataToUpdate = {
                 date: rowElement.querySelector('input[type="date"]').value,
-                client: rowElement.querySelector('input[type="text"]').value,
+                client: rowElement.querySelector('input[type="text"][placeholder="שם הלקוח"]').value,
                 rate: parseFloat(rowElement.querySelector('.rate').value) || 0,
                 hours: parseFloat(rowElement.querySelector('.hours').value) || 0,
-                notes: rowElement.querySelector('input[type="text"]:last-of-type').value,
+                notes: rowElement.querySelector('input[type="text"][placeholder="הוסף הערה..."]').value,
             };
             
             const rate = dataToUpdate.rate;
@@ -229,7 +252,7 @@
         const calculateGrandTotals = () => {
             let totalHours = 0;
             let totalPayment = 0;
-            renderedRows.forEach(row => {
+            document.querySelectorAll('#timesheet-body tr').forEach(row => {
                 totalHours += parseFloat(row.querySelector('.hours').value) || 0;
                 totalPayment += parseFloat(row.querySelector('.daily-total').textContent) || 0;
             });
@@ -250,5 +273,3 @@
     </script>
 </body>
 </html>
-
-
