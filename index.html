@@ -131,7 +131,7 @@
         } catch (error) {
             console.error("Firebase initialization failed:", error);
             showError("שגיאה בתצורת Firebase. יש לוודא שהפרטים שהודבקו בקוד נכונים.");
-            return;
+            // THE ILLEGAL 'return;' STATEMENT WAS REMOVED FROM HERE
         }
         
         // Authentication
