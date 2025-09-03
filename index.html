@@ -88,15 +88,15 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =================================================================
-        //  שלב 1: הדבק כאן את אובייקט התצורה של Firebase מהמדריך
+        //  Your web app's Firebase configuration
         // =================================================================
         const firebaseConfig = {
-            // apiKey: "...",
-            // authDomain: "...",
-            // projectId: "...",
-            // storageBucket: "...",
-            // messagingSenderId: "...",
-            // appId: "..."
+          apiKey: "AIzaSyCQHQ3NjM3aHWpidqEDcbKSUbfAr4WH_tM",
+          authDomain: "my-timesheet-app-10a89.firebaseapp.com",
+          projectId: "my-timesheet-app-10a89",
+          storageBucket: "my-timesheet-app-10a89.appspot.com",
+          messagingSenderId: "388377539767",
+          appId: "1:388377539767:web:894df338184db76de28932"
         };
         // =================================================================
 
@@ -114,7 +114,7 @@
         const renderedRows = new Map(); 
 
         try {
-            if (!firebaseConfig.apiKey) {
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("...")) {
                 throw new Error("Missing Firebase configuration.");
             }
             const app = initializeApp(firebaseConfig);
@@ -273,3 +273,5 @@
     </script>
 </body>
 </html>
+
+
